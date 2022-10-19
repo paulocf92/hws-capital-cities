@@ -5,12 +5,15 @@
 //  Created by Paulo Filho on 19/10/22.
 //
 
+import WebKit
 import MapKit
 import UIKit
 
 class ViewController: UIViewController, MKMapViewDelegate {
 
     @IBOutlet var mapView: MKMapView!
+    var webView: WKWebView!
+    var satelliteView = false;
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -21,7 +24,29 @@ class ViewController: UIViewController, MKMapViewDelegate {
         let rome = Capital(title: "Rome", coordinate: CLLocationCoordinate2D(latitude: 41.9, longitude: 12.5), info: "Has a whole country inside it.")
         let washington = Capital(title: "Washington DC", coordinate: CLLocationCoordinate2D(latitude: 38.895111, longitude: -77.036667), info: "Named after George himself.")
         
+        navigationItem.leftBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "map.fill"), style: .done, target: self, action: #selector(changeViewTapped))
+        
+        webView = WKWebView()
+        webView.allowsBackForwardNavigationGestures = true
+        
         mapView.addAnnotations([london, oslo, paris, rome, washington])
+    }
+    
+    @objc func changeViewTapped() {
+        let ac = UIAlertController(title: "Map view", message: "Alternate map view?", preferredStyle: .alert)
+        ac.addAction(UIAlertAction(title: "Yes", style: .default, handler: { [weak self, weak ac] _ in
+            if self?.satelliteView == false {
+                self?.mapView.preferredConfiguration = MKHybridMapConfiguration(elevationStyle: .realistic)
+            } else {
+                self?.mapView.preferredConfiguration = MKStandardMapConfiguration(elevationStyle: .flat)
+            }
+            
+            self?.satelliteView.toggle()
+            ac?.dismiss(animated: true)
+        }))
+        ac.addAction(UIAlertAction(title: "No", style: .cancel))
+        
+        present(ac, animated: true)
     }
 
     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
@@ -29,7 +54,7 @@ class ViewController: UIViewController, MKMapViewDelegate {
         
         let identifier = "Capital"
         
-        var annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
+        var annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView
         
         if annotationView == nil {
             annotationView = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: identifier)
@@ -40,6 +65,8 @@ class ViewController: UIViewController, MKMapViewDelegate {
         } else {
             annotationView?.annotation = annotation
         }
+        
+        annotationView?.markerTintColor = .cyan
         
         return annotationView
     }
@@ -52,6 +79,13 @@ class ViewController: UIViewController, MKMapViewDelegate {
         
         let ac = UIAlertController(title: placeName, message: placeInfo, preferredStyle: .alert)
         ac.addAction(UIAlertAction(title: "OK", style: .default))
+        ac.addAction(UIAlertAction(title: "View more", style: .default, handler: { [weak self] _ in
+            guard placeName != nil, let capital = placeName?.components(separatedBy: " ").first else { return }
+            
+            let page = WikiPageController()
+            page.capital = capital
+            self?.navigationController?.pushViewController(page, animated: true)
+        }))
         
         present(ac, animated: true)
     }
